@@ -59,6 +59,8 @@ func (l *LocalDBs) Lookup(ipStr string) (*GeoIPInfo, error) {
 			slog.Debug("could not look up country", "ip", ipStr, "err", err)
 		} else if record != nil {
 			info.CountryCode = record.Country.IsoCode
+		} else {
+			slog.Debug("IP address not found in GeoIP database", "ip", ipStr)
 		}
 	}
 
@@ -68,6 +70,8 @@ func (l *LocalDBs) Lookup(ipStr string) (*GeoIPInfo, error) {
 			slog.Debug("could not look up ASN", "ip", ipStr, "err", err)
 		} else if record != nil {
 			info.ASNumber = uint32(record.AutonomousSystemNumber)
+		} else {
+			slog.Debug("IP address not found in ASN database", "ip", ipStr)
 		}
 	}
 
