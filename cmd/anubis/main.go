@@ -85,6 +85,8 @@ var (
 	xffStripPrivate          = flag.Bool("xff-strip-private", true, "if set, strip private addresses from X-Forwarded-For")
 	customRealIPHeader       = flag.String("custom-real-ip-header", "", "if set, read remote IP from header of this name (in case your environment doesn't set X-Real-IP header)")
 
+	thothASN_DB          = flag.String("thoth-asn-db", "", "if set, path to an ASN database file for local IP lookups")
+	thothGeoIPDB         = flag.String("thoth-geoip-db", "", "if set, path to a GeoIP database file for local IP lookups")
 	thothInsecure        = flag.Bool("thoth-insecure", false, "if set, connect to Thoth over plain HTTP/2, don't enable this unless support told you to")
 	thothURL             = flag.String("thoth-url", "", "if set, URL for Thoth, the IP reputation database for Anubis")
 	thothToken           = flag.String("thoth-token", "", "if set, API token for Thoth, the IP reputation database for Anubis")
@@ -324,6 +326,13 @@ func main() {
 
 	// Thoth configuration
 	switch {
+	case *thothGeoIPDB != "" || *thothASN_DB != "":
+		lg.Debug("using local GeoIP/ASN database", "geoPath", *thothGeoIPDB, "asnPath", *thothASN_DB)
+		thothClient, err := thoth.NewLocal(*thothGeoIPDB, *thothASN_DB)
+		if err != nil {
+			log.Fatalf("can't open geoip/asn database: %v", err)
+		}
+		ctx = thoth.With(ctx, thothClient)
 	case *thothURL != "" && *thothToken == "":
 		lg.Warn("THOTH_URL is set but no THOTH_TOKEN is set")
 	case *thothURL == "" && *thothToken != "":

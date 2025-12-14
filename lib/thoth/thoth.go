@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
+	"io"
 	"time"
 
 	"github.com/TecharoHQ/anubis"
@@ -21,6 +22,19 @@ type Client struct {
 	conn    *grpc.ClientConn
 	health  healthv1.HealthClient
 	IPToASN iptoasnv1.IpToASNServiceClient
+	localDb io.Closer
+}
+
+func NewLocal(geoDBPath, asnDBPath string) (*Client, error) {
+	localClient, err := newLocalIpToASNClient(geoDBPath, asnDBPath)
+	if err != nil {
+		return nil, fmt.Errorf("could not create local thoth client: %w", err)
+	}
+
+	return &Client{
+		IPToASN: localClient,
+		localDb: localClient,
+	}, nil
 }
 
 func New(ctx context.Context, thothURL, apiToken string, plaintext bool) (*Client, error) {
@@ -70,6 +84,9 @@ func New(ctx context.Context, thothURL, apiToken string, plaintext bool) (*Clien
 func (c *Client) Close() error {
 	if c.conn != nil {
 		return c.conn.Close()
+	}
+	if c.localDb != nil {
+		return c.localDb.Close()
 	}
 	return nil
 }
