@@ -2,6 +2,7 @@ package thoth
 
 import (
 	"fmt"
+	"log/slog"
 	"net"
 
 	"github.com/oschwald/geoip2-golang"
@@ -23,6 +24,9 @@ func NewLocalDBs(geoPath, asnPath string) (*LocalDBs, error) {
 		if err != nil {
 			return nil, fmt.Errorf("could not open geoip database at %s: %w", geoPath, err)
 		}
+		slog.Info("GeoIP database loaded successfully", "path", geoPath)
+	} else {
+		slog.Info("No GeoIP database path provided, skipping GeoIP lookups.")
 	}
 
 	if asnPath != "" {
@@ -30,6 +34,9 @@ func NewLocalDBs(geoPath, asnPath string) (*LocalDBs, error) {
 		if err != nil {
 			return nil, fmt.Errorf("could not open asn database at %s: %w", asnPath, err)
 		}
+		slog.Info("ASN database loaded successfully", "path", asnPath)
+	} else {
+		slog.Info("No ASN database path provided, skipping ASN lookups.")
 	}
 
 	return &LocalDBs{geoDB: geoDB, asnDB: asnDB}, nil
@@ -48,14 +55,18 @@ func (l *LocalDBs) Lookup(ipStr string) (*GeoIPInfo, error) {
 
 	if l.geoDB != nil {
 		record, err := l.geoDB.Country(ip)
-		if err == nil && record != nil {
+		if err != nil {
+			slog.Debug("could not look up country", "ip", ipStr, "err", err)
+		} else if record != nil {
 			info.CountryCode = record.Country.IsoCode
 		}
 	}
 
 	if l.asnDB != nil {
 		record, err := l.asnDB.ASN(ip)
-		if err == nil && record != nil {
+		if err != nil {
+			slog.Debug("could not look up ASN", "ip", ipStr, "err", err)
+		} else if record != nil {
 			info.ASNumber = uint32(record.AutonomousSystemNumber)
 		}
 	}
